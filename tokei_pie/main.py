@@ -1,14 +1,16 @@
-import os
-import time
-import json
 import argparse
+import json
 import logging
+import os
 import sys
-import plotly.graph_objects as go
+import time
 from dataclasses import dataclass
+from typing import Union
+
+import plotly.graph_objects as go
 
 
-def setup_logs(level):
+def setup_logs(level: int):
     """send paramiko logs to a logfile,
     if they're not already going somewhere"""
 
@@ -24,7 +26,9 @@ HOVER_TEMPLATE = "code: {}</br>comments: {}</br>blanks: {}</br>"
 
 colors_raw = json.load(open(os.path.dirname(__file__) + "/colors.json", "r"))
 # from: https://github.com/ozh/github-colors/blob/master/colors.json
-LANGCOLOR = {k.lower(): v["color"] for k, v in colors_raw.items()}
+LANGCOLOR: dict[str, Union[str, None]] = {
+    k.lower(): v.get("color") for k, v in colors_raw.items()
+}
 
 
 @dataclass
@@ -41,29 +45,29 @@ class Sector:
     inaccurate: bool = False
 
 
-def draw(sectors, to_html):
-    ids = []
-    labels = []
-    parents = []
-    values = []
-    hover_texts = []
-    colors = []
+def draw(sectors, to_html: str):
+    ids: list[str] = []
+    labels: list[str] = []
+    parents: list[str] = []
+    values: list[int] = []
+    hover_texts: list[str] = []
+    colors: list[Union[str, None]] = []
     for s in sectors:
-        logger.debug("sector: {}".format(s))
+        logger.debug("sector: %s", s)
         ids.append(s.id)
         labels.append(s.label)
         parents.append(s.parent_id)
         values.append(s.code + s.comments + s.blanks)
         hover_texts.append(HOVER_TEMPLATE.format(s.code, s.comments, s.blanks))
-        lang = s.lang_type
+        lang: str = s.lang_type
         colors.append(LANGCOLOR.get(lang.lower()))
 
-    logger.info("got {} sectors...".format(len(ids)))
+    logger.info("got %d sectors...", len(ids))
 
-    logger.debug("ids: {}".format(ids))
-    logger.debug("labels: {}".format(labels))
-    logger.debug("parents: {}".format(parents))
-    logger.debug("values: {}".format(values))
+    logger.debug("ids: %s", ids)
+    logger.debug("labels: %s", labels)
+    logger.debug("parents: %s", parents)
+    logger.debug("values: %s", values)
 
     fig = go.Figure(
         go.Sunburst(
@@ -102,12 +106,12 @@ def build_file_tree(reports):
 
 def convert2sectors(dirs, reports, language):
     flat_dirs = dirs.keys()
-    logger.debug(f"flat_dirs: {flat_dirs}")
-    logger.debug(f"reports: {reports}")
-    logger.debug(f"dirs: {dirs}")
+    logger.debug("flat_dirs: %s", flat_dirs)
+    logger.debug("reports: %s", reports)
+    logger.debug("dirs: %s", dirs)
 
-    def dir2sector(dirname, dirs, reports, sectors, language):
-        logger.debug(f"dir2sector({dirname}, {dirs} ...)")
+    def dir2sector(dirname: str, dirs, reports, sectors, language):
+        logger.debug("dir2sector(%s, %s ...)", dirname, dirs)
         subdirs = dirs[dirname]
 
         blanks = code = comments = 0
@@ -171,7 +175,7 @@ def convert2sectors(dirs, reports, language):
 
 def read_reports(reports, parent_id):
     tree = build_file_tree(reports)
-    logger.debug(f"get tree for {parent_id}: {tree}")
+    logger.debug("get tree for %s: %s", parent_id, tree)
     dict_reports = {i["name"]: i["stats"] for i in reports}
     sectors = convert2sectors(tree, dict_reports, parent_id)
     return sectors
@@ -198,13 +202,15 @@ def read_root(data):
     return sectors
 
 
-def common_prefix(prefixes, strings):
-    passed = current_prefix = ""
+def common_prefix(prefixes, strings) -> str:
+    passed: str = ""
+    current_prefix: str = ""
     for prefix in prefixes:
         current_prefix = current_prefix + prefix + os.sep
         if any(not s.startswith(current_prefix) for s in strings):
             return passed
         passed = current_prefix
+    return ""
 
 
 def pre_parse_data(data):
@@ -212,13 +218,13 @@ def pre_parse_data(data):
     for value in data.values():
         reports.extend(t["name"] for t in value.get("reports"))
 
-    one = reports[0]
-    pathes = one.split(os.sep)
+    one: str = reports[0]
+    pathes: list[str] = one.split(os.sep)
     common_prefix_str = common_prefix(pathes, reports)
 
     prefix_len = len(common_prefix_str)
     for value in data.values():
-        for report in value.get("reports"):
+        for report in value.get("reports", []):
             report["name"] = "." + os.sep + report["name"][prefix_len:]
 
     return data
@@ -253,17 +259,14 @@ def main():
 
     data = pre_parse_data(data)
     load_time = time.time()
-    logger.info("load json file done, took {:.2f}s".format(load_time - start))
+    logger.info("load json file done, took %.2fs", load_time - start)
     sectors = read_root(data)
     parse_file_time = time.time()
-    logger.info(
-        "parse tokei data done, took {:.2f}s".format(parse_file_time - load_time)
-    )
+    logger.info("parse tokei data done, took %.2fs", parse_file_time - load_time)
+
     draw(sectors, args.output_html)
     draw_time = time.time()
-    logger.info(
-        "draw sunburst chart done, took {:.2f}s".format(draw_time - parse_file_time)
-    )
+    logger.info("draw sunburst chart done, took %.2fs", draw_time - parse_file_time)
 
 
 if __name__ == "__main__":
