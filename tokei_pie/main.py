@@ -251,9 +251,8 @@ def main():
     try:
         data = json.load(sys.stdin)
     except json.decoder.JSONDecodeError:
-        print(
-            "Stdin is not json, please pass tokei's json output to tokei-pie, like this: tokei -o json | tokei-pie",
-            file=sys.stderr,
+        logger.error(
+            "Stdin is not json, please pass tokei's json output to tokei-pie, like this: tokei -o json | tokei-pie"
         )
         sys.exit(128)
 

@@ -14,11 +14,11 @@ pip install tokei-pie
 ## Usage
 
 ```shell
-$ tokei -o json | tokei-pie
+tokei -o json | tokei-pie
 ```
 
 🪄
 
-![](./docs/tokei-pie-demo.png)
+![Tokei Pie Demo](./docs/tokei-pie-demo.png)
 
 (This is how [django](https://github.com/django/django) looks like!)
